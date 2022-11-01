@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"strconv"
 	"strings"
 	"time"
 
@@ -465,10 +466,15 @@ func getGCPolicyFromJSON(inputPolicy map[string]interface{}, isTopLevel bool) (b
 
 		if childPolicy["max_age"] != nil {
 			maxAge := childPolicy["max_age"].(string)
-			duration, err := time.ParseDuration(maxAge)
+			duration, err := getMaxAgeDuration2(maxAge)
+			fmt.Println(">>>>>duration :", duration)
 			if err != nil {
 				return nil, fmt.Errorf("invalid duration string: %v", maxAge)
 			}
+			// duration, err := time.ParseDuration(maxAge)
+			// if err != nil {
+			// 	return nil, fmt.Errorf("invalid duration string: %v", maxAge)
+			// }
 			policy = append(policy, bigtable.MaxAgePolicy(duration))
 		}
 
@@ -545,6 +551,9 @@ func validateNestedPolicy(p map[string]interface{}, isTopLevel bool) error {
 }
 
 func getMaxAgeDuration(values map[string]interface{}) (time.Duration, error) {
+	fmt.Println("getMaxAgeDuration :", values)
+	fmt.Println("values[days] :", values["days"])
+	fmt.Println("values[duration] :", values["duration"])
 	d := values["duration"].(string)
 	if d != "" {
 		return time.ParseDuration(d)
@@ -553,4 +562,23 @@ func getMaxAgeDuration(values map[string]interface{}) (time.Duration, error) {
 	days := values["days"].(int)
 
 	return time.Hour * 24 * time.Duration(days), nil
+}
+
+func getMaxAgeDuration2(value string) (time.Duration, error) {
+	fmt.Println("getMaxAgeDuration2 :", value)
+	d := strings.Index(value, "d")
+	fmt.Println("getMaxAgeDuration2-d :", d)
+	if d == -1 {
+		return time.ParseDuration(value)
+	}
+
+	days := strings.Replace(value, "d", "", -1)
+	dayInt, err := strconv.Atoi(days)
+	if err != nil {
+		return 0, err
+	}
+
+	// days := values["days"].(int)
+
+	return time.Hour * 24 * time.Duration(dayInt), nil
 }
